@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hiệu ứng Hành tinh Tương tác (Three.js)</title>
+
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden; /* Quan trọng để ẩn thanh cuộn */
+        background-color: #000000; /* Nền đen như trong video */
+      }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  </head>
+  <body>
+    <script>
+      // Thiết lập các biến cơ bản
+      let scene, camera, renderer;
+      let planet, particles;
+      const NUM_PARTICLES = 1000;
+
+      function init() {
+        // 1. Scene (Không gian 3D)
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a20); // Màu nền tối, xanh đen
+
+        // 2. Camera (Góc nhìn)
+        camera = new THREE.PerspectiveCamera(
+          75,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          1000
+        );
+        camera.position.z = 5;
+
+        // 3. Renderer (Công cụ kết xuất)
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 4. Tạo Hành tinh (Sphere)
+        const planetGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+        // Sử dụng vật liệu cơ bản, sau này có thể thay bằng ShaderMaterial để làm rực rỡ hơn
+        const planetMaterial = new THREE.MeshPhongMaterial({
+          color: 0x8a2be2,
+          wireframe: false,
+        });
+        planet = new THREE.Mesh(planetGeometry, planetMaterial);
+        scene.add(planet);
+
+        // 5. Thêm Ánh sáng (Quan trọng cho MeshPhongMaterial)
+        const light = new THREE.PointLight(0xffffff, 1);
+        light.position.set(5, 5, 5);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040)); // Ánh sáng môi trường
+
+        // 6. Tạo Hệ thống Hạt (Particles) - Mô phỏng các trái tim
+        const particleGeometry = new THREE.BufferGeometry();
+        const positions = [];
+        const colors = [];
+
+        // Màu sắc chuyển tiếp (Gradient Color)
+        const colorStart = new THREE.Color(0xff00ff); // Hồng
+        const colorEnd = new THREE.Color(0x00ffff); // Xanh Cyan
+
+        for (let i = 0; i < NUM_PARTICLES; i++) {
+          // Vị trí ngẫu nhiên xung quanh hành tinh (ví dụ: trong phạm vi 2.5 đến 4 đơn vị)
+          const radius = 2.5 + Math.random() * 1.5;
+          const angle = Math.random() * Math.PI * 2;
+          const x = radius * Math.cos(angle) * (Math.random() > 0.5 ? 1 : -1);
+          const y = (Math.random() - 0.5) * 3; // Lên xuống
+          const z = radius * Math.sin(angle) * (Math.random() > 0.5 ? 1 : -1);
+
+          positions.push(x, y, z);
+
+          // Gán màu ngẫu nhiên giữa màu bắt đầu và màu kết thúc
+          const color = colorStart.clone().lerp(colorEnd, Math.random());
+          colors.push(color.r, color.g, color.b);
+        }
+
+        particleGeometry.setAttribute(
+          "position",
+          new THREE.Float32BufferAttribute(positions, 3)
+        );
+        particleGeometry.setAttribute(
+          "color",
+          new THREE.Float32BufferAttribute(colors, 3)
+        );
+
+        const particleMaterial = new THREE.PointsMaterial({
+          size: 0.1,
+          vertexColors: true, // Cho phép sử dụng màu sắc đã gán
+          blending: THREE.AdditiveBlending, // Hiệu ứng sáng lấp lánh
+          transparent: true,
+          opacity: 0.8,
+        });
+
+        particles = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particles);
+
+        // Xử lý thay đổi kích thước cửa sổ
+        window.addEventListener("resize", onWindowResize, false);
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      // Vòng lặp Animation
+      function animate() {
+        requestAnimationFrame(animate);
+
+        // Hành tinh xoay chậm
+        planet.rotation.y += 0.005;
+
+        // Hạt chuyển động (Mô phỏng nhẹ)
+        particles.rotation.y += 0.001; // Xoay cùng hành tinh
+        particles.rotation.x += 0.0005; // Xoay nhẹ theo trục khác
+
+        renderer.render(scene, camera);
+      }
+
+      // Bắt đầu ứng dụng
+      init();
+      animate();
+
+      // Thêm tương tác: Ví dụ đổi màu khi click vào
+      document.addEventListener("click", () => {
+        // Đổi màu ngẫu nhiên cho hành tinh khi click (ví dụ cơ bản)
+        const newColor = new THREE.Color(Math.random() * 0xffffff);
+        planet.material.color.set(newColor);
+      });
+    </script>
+  </body>
+</html>
